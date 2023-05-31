@@ -3,6 +3,9 @@ custom:
   SERVICE_NAME: send-email-ses
   MY_REGION: sa-east-1
   DOMAIN: joeg.xyz
+  bundle:
+    rawFileExtensions:
+      - hbs
 
 service: ${self:custom.SERVICE_NAME}
 
@@ -18,7 +21,6 @@ provider:
           Action:
             - ses:sendRawEmail
           Resource: "*"
-
 
 plugins:
   - serverless-bundle # TypeScript bundler
