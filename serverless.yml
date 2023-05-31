@@ -1,0 +1,93 @@
+custom:
+  IAM_PROFILE: default
+  SERVICE_NAME: YOUR_NAME-ses
+  MY_REGION: eu-west-2
+  DOMAIN: YOUR_DOMAIN.com
+
+service: ${self:custom.SERVICE_NAME}
+
+provider:
+  name: aws
+  profile: ${self:custom.IAM_PROFILE}
+  runtime: nodejs18.x
+  region: ${self:custom.MY_REGION}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - ses:sendRawEmail
+          Resource: "*"
+
+functions:
+  sendEmail:
+    name: ${self:custom.SERVICE_NAME}-${sls:stage}
+    environment:
+      DOMAIN: ${self:custom.DOMAIN}
+    handler: sendEmail.handler
+
+resources:
+  Resources:
+    SESIdentity:
+      Type: AWS::SES::EmailIdentity
+      Properties:
+        DkimAttributes:
+          SigningEnabled: true
+        DkimSigningAttributes:
+          NextSigningKeyLength: RSA_2048_BIT
+        EmailIdentity: ${self:custom.DOMAIN}
+        FeedbackAttributes:
+          EmailForwardingEnabled: true
+        MailFromAttributes:
+          BehaviorOnMxFailure: USE_DEFAULT_VALUE
+          MailFromDomain: email.${self:custom.DOMAIN}
+    Route53SESIdendityVerificationRecord1:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: !GetAtt SESIdentity.DkimDNSTokenName1
+        Comment: ${self:custom.DOMAIN}-SES-1
+        Type: CNAME
+        HostedZoneName: ${self:custom.DOMAIN}.
+        TTL: "900"
+        ResourceRecords:
+          - !GetAtt SESIdentity.DkimDNSTokenValue1
+    Route53SESIdendityVerificationRecord2:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: !GetAtt SESIdentity.DkimDNSTokenName2
+        Comment: ${self:custom.DOMAIN}-SES-2
+        Type: CNAME
+        HostedZoneName: ${self:custom.DOMAIN}.
+        TTL: "900"
+        ResourceRecords:
+          - !GetAtt SESIdentity.DkimDNSTokenValue2
+    Route53SESIdendityVerificationRecord3:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: !GetAtt SESIdentity.DkimDNSTokenName3
+        Comment: ${self:custom.DOMAIN}-SES-3
+        Type: CNAME
+        HostedZoneName: ${self:custom.DOMAIN}.
+        TTL: "900"
+        ResourceRecords:
+          - !GetAtt SESIdentity.DkimDNSTokenValue3
+    Route53SESMailFromMX:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: email.${self:custom.DOMAIN}
+        Comment: ${self:custom.DOMAIN}-SES-MX
+        Type: MX
+        HostedZoneName: ${self:custom.DOMAIN}.
+        TTL: "900"
+        ResourceRecords:
+          - 10 feedback-smtp.${self:custom.MY_REGION}.amazonses.com
+    Route53SESMailFromTXT:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: email.${self:custom.DOMAIN}
+        Comment: ${self:custom.DOMAIN}-SES-TXT
+        Type: TXT
+        HostedZoneName: ${self:custom.DOMAIN}.
+        TTL: "900"
+        ResourceRecords:
+          - '"v=spf1 include:amazonses.com ~all"'

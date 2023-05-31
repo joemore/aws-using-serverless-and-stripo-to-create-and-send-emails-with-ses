@@ -1,0 +1,17 @@
+{
+  "name": "aws-using-serverless-and-stripo-to-create-and-send-emails-with-ses",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.342.0",
+    "@aws-sdk/credential-provider-node": "^3.342.0",
+    "handlebars": "^4.7.7",
+    "nodemailer": "^6.9.3"
+  }
+}
