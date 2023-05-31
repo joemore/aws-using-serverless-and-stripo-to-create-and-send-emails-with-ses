@@ -1,8 +1,8 @@
 custom:
-  IAM_PROFILE: default
-  SERVICE_NAME: YOUR_NAME-ses
-  MY_REGION: eu-west-2
-  DOMAIN: YOUR_DOMAIN.com
+  IAM_PROFILE: JoeVistaAdmin
+  SERVICE_NAME: send-email-ses
+  MY_REGION: sa-east-1
+  DOMAIN: joeg.xyz
 
 service: ${self:custom.SERVICE_NAME}
 
@@ -19,12 +19,17 @@ provider:
             - ses:sendRawEmail
           Resource: "*"
 
+
+plugins:
+  - serverless-bundle # TypeScript bundler
+
 functions:
   sendEmail:
     name: ${self:custom.SERVICE_NAME}-${sls:stage}
     environment:
       DOMAIN: ${self:custom.DOMAIN}
-    handler: sendEmail.handler
+      REGION: ${self:custom.MY_REGION}
+    handler: src/sendEmail.handler
 
 resources:
   Resources:
