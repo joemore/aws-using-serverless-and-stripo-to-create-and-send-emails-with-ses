@@ -1,13 +1,19 @@
+# The editable parts, either edit the below directly, or copy .env.example to .env and edit there!
 custom:
-  IAM_PROFILE: JoeVistaAdmin
-  SERVICE_NAME: send-email-ses
-  MY_REGION: sa-east-1
-  DOMAIN: joeg.xyz
+  IAM_PROFILE: ${env:IAM_PROFILE} # e.g. YourIAMCredentialsUser
+  SERVICE_NAME: ${env:SERVICE_NAME} # e.g. send-email-ses
+  MY_REGION: ${env:MY_REGION} # e.g us-east-1
+  EMAIL_DOMAIN: ${env:EMAIL_DOMAIN} # e.g yourdomain.com, must be registered in route53
+
+  # NOTE: Only fill out the below if you know what you're doing!
+
+  # Make sure we include any handlebars .hbs files
   bundle:
     rawFileExtensions:
       - hbs
 
 service: ${self:custom.SERVICE_NAME}
+useDotenv: true
 
 provider:
   name: aws
@@ -19,7 +25,7 @@ provider:
       statements:
         - Effect: "Allow"
           Action:
-            - ses:sendRawEmail
+            - ses:SendEmail
           Resource: "*"
 
 plugins:
@@ -29,10 +35,11 @@ functions:
   sendEmail:
     name: ${self:custom.SERVICE_NAME}-${sls:stage}
     environment:
-      DOMAIN: ${self:custom.DOMAIN}
+      EMAIL_DOMAIN: ${self:custom.EMAIL_DOMAIN}
       REGION: ${self:custom.MY_REGION}
     handler: src/sendEmail.handler
 
+# Comment out all of the below if you already have an email domain registered in SES
 resources:
   Resources:
     SESIdentity:
@@ -42,19 +49,19 @@ resources:
           SigningEnabled: true
         DkimSigningAttributes:
           NextSigningKeyLength: RSA_2048_BIT
-        EmailIdentity: ${self:custom.DOMAIN}
+        EmailIdentity: ${self:custom.EMAIL_DOMAIN}
         FeedbackAttributes:
           EmailForwardingEnabled: true
         MailFromAttributes:
           BehaviorOnMxFailure: USE_DEFAULT_VALUE
-          MailFromDomain: email.${self:custom.DOMAIN}
+          MailFromDomain: email.${self:custom.EMAIL_DOMAIN}
     Route53SESIdendityVerificationRecord1:
       Type: AWS::Route53::RecordSet
       Properties:
         Name: !GetAtt SESIdentity.DkimDNSTokenName1
-        Comment: ${self:custom.DOMAIN}-SES-1
+        Comment: ${self:custom.EMAIL_DOMAIN}-SES-1
         Type: CNAME
-        HostedZoneName: ${self:custom.DOMAIN}.
+        HostedZoneName: ${self:custom.EMAIL_DOMAIN}.
         TTL: "900"
         ResourceRecords:
           - !GetAtt SESIdentity.DkimDNSTokenValue1
@@ -62,9 +69,9 @@ resources:
       Type: AWS::Route53::RecordSet
       Properties:
         Name: !GetAtt SESIdentity.DkimDNSTokenName2
-        Comment: ${self:custom.DOMAIN}-SES-2
+        Comment: ${self:custom.EMAIL_DOMAIN}-SES-2
         Type: CNAME
-        HostedZoneName: ${self:custom.DOMAIN}.
+        HostedZoneName: ${self:custom.EMAIL_DOMAIN}.
         TTL: "900"
         ResourceRecords:
           - !GetAtt SESIdentity.DkimDNSTokenValue2
@@ -72,29 +79,29 @@ resources:
       Type: AWS::Route53::RecordSet
       Properties:
         Name: !GetAtt SESIdentity.DkimDNSTokenName3
-        Comment: ${self:custom.DOMAIN}-SES-3
+        Comment: ${self:custom.EMAIL_DOMAIN}-SES-3
         Type: CNAME
-        HostedZoneName: ${self:custom.DOMAIN}.
+        HostedZoneName: ${self:custom.EMAIL_DOMAIN}.
         TTL: "900"
         ResourceRecords:
           - !GetAtt SESIdentity.DkimDNSTokenValue3
     Route53SESMailFromMX:
       Type: AWS::Route53::RecordSet
       Properties:
-        Name: email.${self:custom.DOMAIN}
-        Comment: ${self:custom.DOMAIN}-SES-MX
+        Name: email.${self:custom.EMAIL_DOMAIN}
+        Comment: ${self:custom.EMAIL_DOMAIN}-SES-MX
         Type: MX
-        HostedZoneName: ${self:custom.DOMAIN}.
+        HostedZoneName: ${self:custom.EMAIL_DOMAIN}.
         TTL: "900"
         ResourceRecords:
           - 10 feedback-smtp.${self:custom.MY_REGION}.amazonses.com
     Route53SESMailFromTXT:
       Type: AWS::Route53::RecordSet
       Properties:
-        Name: email.${self:custom.DOMAIN}
-        Comment: ${self:custom.DOMAIN}-SES-TXT
+        Name: email.${self:custom.EMAIL_DOMAIN}
+        Comment: ${self:custom.EMAIL_DOMAIN}-SES-TXT
         Type: TXT
-        HostedZoneName: ${self:custom.DOMAIN}.
+        HostedZoneName: ${self:custom.EMAIL_DOMAIN}.
         TTL: "900"
         ResourceRecords:
           - '"v=spf1 include:amazonses.com ~all"'

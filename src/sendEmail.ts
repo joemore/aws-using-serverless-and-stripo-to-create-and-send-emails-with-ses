@@ -5,9 +5,9 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import Handlebars from "handlebars";
 import template from "./template.hbs";
-const { REGION, DOMAIN } = process.env;
-if (!DOMAIN) {
-  throw new Error("DOMAIN is required");
+const { REGION, EMAIL_DOMAIN } = process.env;
+if (!EMAIL_DOMAIN) {
+  throw new Error("EMAIL_DOMAIN is required");
 }
 if (!REGION) {
   throw new Error("REGION is required");
@@ -21,34 +21,44 @@ interface iEvent {
 }
 
 export const handler = async (event: iEvent) => {
-  console.log("event", event);
 
   try {
+    const sesClient = new SESClient({ region: REGION });
     const { name, email, subject } = event;
 
-    const sesClient = new SESClient({ region: REGION });
-
+    // Compile HTML with Handlebars
     const compiled = Handlebars.compile(template);
-    const htmlMessage = compiled({ name: name, useremail: email });
+    const htmlMessage = compiled({ username: name, useremail: email });
 
-    const source = `hello@${DOMAIN}`;
+    // Set our source and replyTo addresses
+    const source = `hello@${EMAIL_DOMAIN}`;
+    const replyTo = `contact@${EMAIL_DOMAIN}`;
 
     const command = new SendEmailCommand({
       Source: source,
       Destination: {
-        ToAddresses: [email],
+        ToAddresses: [email], // Please note: if in Sandbox mode, this must be a verified email address
       },
       Message: {
         Subject: { Data: subject },
-        Body: { Text: { Data: htmlMessage } },
+        Body: { 
+          Html: {
+            Charset: "UTF-8",
+            Data: htmlMessage,
+          },
+          Text: {
+            Charset: "UTF-8",
+            Data: "Please view this email in a client that supports HTML",
+          },
+        },
       },
-      ReplyToAddresses: [`contact@${DOMAIN}`],
+      ReplyToAddresses: [replyTo],
     });
+    await sesClient.send(command);
+    // You should have been sent the email by now!!
 
-    console.log("📧 command", command);
-    const result = await sesClient.send(command);
-    console.log("📧 result", result);
   } catch (error: any) {
     console.log("❌ Error sending email:", error);
+    throw new Error("❌ Error sending email:", error);
   }
 };
