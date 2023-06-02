@@ -54,4 +54,4 @@ Click on the Test tab, and create a new test event.
 
 ### Invoking the email from another Lambda function
 
-
+[coming soon...]
